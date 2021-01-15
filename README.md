@@ -1,0 +1,1 @@
+https://discord.com/api/oauth2/authorize?client_id=799567728989044758&permissions=3072&redirect_uri=http%3A%2F%2Fexample.com%2Fredirect&scope=bot
