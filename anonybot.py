@@ -56,7 +56,7 @@ def main():
         in_use.add(author_emoji)
 
         # Send the message with the emoji prepended
-        return await channel.send(f"{author_emoji}: {message.content}")
+        return await channel.send(f"{author_emoji} {message.content}")
 
 
     async def find_anon_channel(client, message):
