@@ -89,11 +89,14 @@ def main():
 
 
     def random_new_emoji():
-        emoji = random.choice(emoji_options)
-        while emoji in in_use:
-            emoji = random.choice(emoji_options)
-        
-        return emoji
+        emoji_options_copy = emoji_options.copy()
+        for emoji in in_use:
+            emoji_options_copy.remove(emoji)
+        if len(emoji_options_copy) == 0:
+            print("No unused emoji left!")
+            return "💩"
+        else:
+            return random.choice(emoji_options_copy)
 
     
     client.run(TOKEN)
