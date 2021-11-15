@@ -35,7 +35,7 @@ def main():
         if not isinstance(message.channel, discord.DMChannel):
             return
 
-        clear_stale_author_emojis(author_emojis)
+        clear_stale_author_emojis()
         
         # Get the user's anon channel, or bail if can't
         channel = await find_anon_channel(client, message)
@@ -46,7 +46,7 @@ def main():
         author_id = message.author.id
         author_emoji = author_emojis[author_id]["emoji"] \
             if author_id in author_emojis \
-            else random_emoji()
+            else random_new_emoji()
 
         # Update the emoji cache
         author_emojis[author_id] = {
@@ -56,10 +56,7 @@ def main():
         in_use.add(author_emoji)
 
         # Send the message with the emoji prepended
-        return channel.send(f"{author_emoji}: {message.content}")
-
-
-    client.run(TOKEN)
+        return await channel.send(f"{author_emoji}: {message.content}")
 
 
     async def find_anon_channel(client, message):
@@ -80,19 +77,26 @@ def main():
 
 
     def clear_stale_author_emojis():
-        expiry = datetime.now() - datetime.timedelta(seconds=emoji_timeout_seconds)
+        expiry = datetime.datetime.utcnow() - datetime.timedelta(seconds=emoji_timeout_seconds)
+        to_remove = []
         for user_id in author_emojis:
             if author_emojis[user_id]["time"] < expiry:
                 in_use.remove(author_emojis[user_id]["emoji"])
-                del author_emojis[user_id]
-
+                to_remove.append(user_id)
+        
+        for user_id in to_remove:
+            del author_emojis[user_id]
 
 
     def random_new_emoji():
         emoji = random.choice(emoji_options)
         while emoji in in_use:
             emoji = random.choice(emoji_options)
+        
         return emoji
+
+    
+    client.run(TOKEN)
 
 
 if __name__ == "__main__":
