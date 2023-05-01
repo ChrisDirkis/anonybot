@@ -1,3 +1,4 @@
+import re
 from dotenv import load_dotenv
 import os
 import random
@@ -28,12 +29,19 @@ def main():
 
     @client.event
     async def on_message(message):
+        funcs = [anonymous, bucket]
+        for func in funcs:
+            if await func(message):
+                #print(f"applying {func.__name__}")
+                break
+
+    async def anonymous(message):
         # Don't post my own messages
         if message.author == client.user:
-            return
+            return False
         # Only care about DMs
         if not isinstance(message.channel, discord.DMChannel):
-            return
+            return False
 
         clear_stale_author_emojis()
         
@@ -56,8 +64,47 @@ def main():
         in_use.add(author_emoji)
 
         # Send the message with the emoji prepended
-        return await channel.send(f"{author_emoji} {message.content}")
+        await channel.send(f"{author_emoji} {message.content}")
+        return True
 
+
+    bucket_storage = []
+    async def bucket(message):
+        # Don't respond to my own messages
+        if message.author == client.user:
+            return False
+
+        # Don't care about DMs
+        if isinstance(message.channel, discord.DMChannel):
+            return False
+
+        # Check if the message is a bucket command
+        lower_message = message.content.lower()
+        
+        regex_match = re.match(r"(?i)^[\*\_]*(give|hand|pass)(s)? bucket (.*)", lower_message)
+        if not regex_match:
+            return False
+
+        bucket_take_phrases = ["takes", "grabs", "yoinks", "steals", "snatches", "snags", "pilfers", "nabs", "swipes", "plunders", "filches", "purloins", "lifts", "pinches", "liberates", "misappropriates", "acquires", "confiscates", "expropriates", "annexes", "\"impounds\"", "seizes hold of", "commandeers", "hijacks", "kidnaps", "embezzles"]
+        take_phrase = bucket_take_phrases[random.randrange(len(bucket_take_phrases))]
+
+        item = regex_match[3]
+        if len(bucket_storage) > 10:
+            to_remove = bucket_storage.pop(random.randrange(len(bucket_storage)))
+            bucket_storage.append(item)            
+            
+            bucket_drop_phrases = ["drops", "yeets", "spits out", "vomits", "farts out", "releases, like a small pigeon,"]
+            drop_phrase = bucket_drop_phrases[random.randrange(len(bucket_drop_phrases))]
+
+            await message.channel.send(f"bucket {take_phrase} {item} but {drop_phrase} {to_remove}")
+        else:
+            bucket_eat_phrases = ["caresses it gently", "yeets it within itself", "consumes it with a belch"]
+            bucket_storage.append(item)
+            eat_phrase = bucket_eat_phrases[random.randrange(len(bucket_eat_phrases))]
+
+            await message.channel.send(f"bucket {take_phrase} {item} and {eat_phrase}")
+        
+        return True
 
     async def find_anon_channel(client, message):
         guild = next((g for g in client.guilds if g.get_member(message.author.id)), None)
