@@ -78,10 +78,8 @@ def main():
         if isinstance(message.channel, discord.DMChannel):
             return False
 
-        # Check if the message is a bucket command
-        lower_message = message.content.lower()
-        
-        regex_match = re.match(r"(?i)^[\*\_]*(give|hand|pass)(s)? bucket (.*)", lower_message)
+        # Check if the message is a bucket command, and if so, figure out what he's being given
+        regex_match = re.match(r"(?i)^[\*\_]*(give|hand|pass)(s)? bucket (.*)", message.content)
         if not regex_match:
             return False
 
