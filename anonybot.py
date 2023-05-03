@@ -35,14 +35,9 @@ def main():
                 #print(f"applying {func.__name__}")
                 break
 
+    @no_self_respond(client)
+    @dm_only
     async def anonymous(message):
-        # Don't post my own messages
-        if message.author == client.user:
-            return False
-        # Only care about DMs
-        if not isinstance(message.channel, discord.DMChannel):
-            return False
-
         clear_stale_author_emojis()
         
         # Get the user's anon channel, or bail if can't
@@ -77,25 +72,12 @@ def main():
         ("farts out", 10),
         ("releases, like a small pigeon,", 1),
     ]
+
+    @no_self_respond(client)
+    @channel_only
     async def bucket_give_item(message):
-        # Don't respond to my own messages
-        if message.author == client.user:
-            return False
-
-        # Don't care about DMs
-        if isinstance(message.channel, discord.DMChannel):
-            return False
-
         # Check if the message is a bucket give command, and if so, figure out what he's being given
-        message_text = message.content
-        while True:
-            if message_text.startswith("*") and message_text.endswith("*"):
-                message_text = message_text[1:-1]
-            elif message_text.startswith("_") and message_text.endswith("_"):
-                message_text = message_text[1:-1]
-            else:
-                break
-
+        message_text = strip_formatting(message.content)
         bucket_processors = [bucket_put_processor, bucket_give_processor]
         for processor in bucket_processors:
             if item := processor(message_text):
@@ -157,25 +139,11 @@ def main():
         
         return True
 
+    @no_self_respond(client)
+    @channel_only
     async def bucket_take_item(message):
-        # Don't respond to my own messages
-        if message.author == client.user:
-            return False
-
-        # Don't care about DMs
-        if isinstance(message.channel, discord.DMChannel):
-            return False
-
-        # Check if the message is a bucket take command, and if so, figure out what he's being given
-        message_text = message.content
-        while True:
-            if message_text.startswith("*") and message_text.endswith("*"):
-                message_text = message_text[1:-1]
-            elif message_text.startswith("_") and message_text.endswith("_"):
-                message_text = message_text[1:-1]
-            else:
-                break
-
+        # Check if the message is a bucket take command
+        message_text = strip_formatting(message.content)
         regex_match = re.match(r"(?i)^(take|takes|steal|steals)( something|an item)? from bucket", message_text)
         if not regex_match:
             return None
@@ -189,25 +157,11 @@ def main():
         
         return True
     
+    @no_self_respond(client)
+    @channel_only
     async def bucket_inventory(message):
-        # Don't respond to my own messages
-        if message.author == client.user:
-            return False
-
-        # Don't care about DMs
-        if isinstance(message.channel, discord.DMChannel):
-            return False
-
-        # Check if the message is a bucket take command, and if so, figure out what he's being given
-        message_text = message.content
-        while True:
-            if message_text.startswith("*") and message_text.endswith("*"):
-                message_text = message_text[1:-1]
-            elif message_text.startswith("_") and message_text.endswith("_"):
-                message_text = message_text[1:-1]
-            else:
-                break
-
+        # Check if the message is a bucket inventory command
+        message_text = strip_formatting(message.content)
         regex_match = re.match(r"(?i)^(look|looks) in(to)? bucket", message_text)
         if not regex_match:
             return False
@@ -285,6 +239,39 @@ def select_weighted(lst):
         if upto + weight >= r:
             return item
         upto += weight
+
+def strip_formatting(message):
+    while True:
+        if message.startswith("*") and message.endswith("*"):
+            message = message[1:-1]
+        elif message.startswith("_") and message.endswith("_"):
+            message = message[1:-1]
+        else:
+            break
+    return message
+
+def dm_only(func):
+    async def wrapper(message):
+        if not isinstance(message.channel, discord.DMChannel):
+            return False
+        return await func(message)
+    return wrapper
+
+def channel_only(func):
+    async def wrapper(message):
+        if isinstance(message.channel, discord.DMChannel):
+            return False
+        return await func(message)
+    return wrapper
+
+def no_self_respond(client):
+    def decorator(func):
+        async def wrapper(message):
+            if message.author == client.user:
+                return False
+            return await func(message)
+        return wrapper
+    return decorator
 
 if __name__ == "__main__":
     main()
