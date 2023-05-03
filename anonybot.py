@@ -29,7 +29,7 @@ def main():
 
     @client.event
     async def on_message(message):
-        funcs = [anonymous, bucket]
+        funcs = [anonymous, bucket_give_item, bucket_take_item, bucket_inventory]
         for func in funcs:
             if await func(message):
                 #print(f"applying {func.__name__}")
@@ -69,7 +69,15 @@ def main():
 
 
     bucket_storage = []
-    async def bucket(message):
+    bucket_drop_phrases = [
+        ("drops", 100),
+        ("yeets", 5),
+        ("spits out", 10),
+        ("vomits", 5),
+        ("farts out", 10),
+        ("releases, like a small pigeon,", 1),
+    ]
+    async def bucket_give_item(message):
         # Don't respond to my own messages
         if message.author == client.user:
             return False
@@ -78,29 +86,136 @@ def main():
         if isinstance(message.channel, discord.DMChannel):
             return False
 
-        # Check if the message is a bucket command, and if so, figure out what he's being given
-        regex_match = re.match(r"(?i)^[\*\_]*(give|hand|pass)(s)? bucket (.*)", message.content)
-        if not regex_match:
+        # Check if the message is a bucket give command, and if so, figure out what he's being given
+        message_text = message.content
+        while True:
+            if message_text.startswith("*") and message_text.endswith("*"):
+                message_text = message_text[1:-1]
+            elif message_text.startswith("_") and message_text.endswith("_"):
+                message_text = message_text[1:-1]
+            else:
+                break
+
+        bucket_processors = [bucket_put_processor, bucket_give_processor]
+        for processor in bucket_processors:
+            if item := processor(message_text):
+                break
+        else:
             return False
 
-        bucket_take_phrases = ["takes", "grabs", "yoinks", "steals", "snatches", "snags", "pilfers", "nabs", "swipes", "plunders", "filches", "purloins", "lifts", "pinches", "liberates", "misappropriates", "acquires", "confiscates", "expropriates", "annexes", "\"impounds\"", "seizes hold of", "commandeers", "hijacks", "kidnaps", "embezzles"]
-        take_phrase = bucket_take_phrases[random.randrange(len(bucket_take_phrases))]
-
-        item = regex_match[3]
+        # take the item, elaborately
+        bucket_take_phrases = [
+            ("takes", 100), 
+            ("grabs", 100), 
+            ("yoinks", 10), 
+            ("steals", 10), 
+            ("snatches", 20), 
+            ("snags", 1), 
+            ("pilfers", 1), 
+            ("nabs", 1), 
+            ("swipes", 1), 
+            ("plunders", 1), 
+            ("filches", 1), 
+            ("purloins", 1), 
+            ("lifts", 1), 
+            ("pinches", 1), 
+            ("liberates", 1), 
+            ("misappropriates", 1), 
+            ("acquires", 10), 
+            ("confiscates", 1), 
+            ("expropriates", 1), 
+            ("annexes", 1), 
+            ("\"impounds\"", 1), 
+            ("seizes hold of", 1), 
+            ("commandeers", 1), 
+            ("hijacks", 1), 
+            ("kidnaps", 1), 
+            ("embezzles", 1),
+        ]
+        take_phrase = select_weighted(bucket_take_phrases)
+        
         if len(bucket_storage) > 10:
             to_remove = bucket_storage.pop(random.randrange(len(bucket_storage)))
             bucket_storage.append(item)            
             
-            bucket_drop_phrases = ["drops", "yeets", "spits out", "vomits", "farts out", "releases, like a small pigeon,"]
-            drop_phrase = bucket_drop_phrases[random.randrange(len(bucket_drop_phrases))]
+            drop_phrase = select_weighted(bucket_drop_phrases)
 
-            await message.channel.send(f"bucket {take_phrase} {item} but {drop_phrase} {to_remove}")
+            await message.channel.send(f"Bucket {take_phrase} {item} but {drop_phrase} {to_remove}")
         else:
-            bucket_eat_phrases = ["caresses it gently", "yeets it within itself", "consumes it with a belch"]
             bucket_storage.append(item)
-            eat_phrase = bucket_eat_phrases[random.randrange(len(bucket_eat_phrases))]
+            
+            bucket_eat_phrases = [
+                ("", 100),
+                (", and caresses it gently", 50),
+                (", and yeets it within itself",  50),
+                (", and consumes it with a belch", 50),
+                (", without a word of complaint", 50),
+                (", begrudgingly", 50),
+            ]
+            eat_phrase = select_weighted(bucket_eat_phrases)
+            await message.channel.send(f"Bucket {take_phrase} {item}{eat_phrase}")
+        
+        return True
 
-            await message.channel.send(f"bucket {take_phrase} {item} and {eat_phrase}")
+    async def bucket_take_item(message):
+        # Don't respond to my own messages
+        if message.author == client.user:
+            return False
+
+        # Don't care about DMs
+        if isinstance(message.channel, discord.DMChannel):
+            return False
+
+        # Check if the message is a bucket take command, and if so, figure out what he's being given
+        message_text = message.content
+        while True:
+            if message_text.startswith("*") and message_text.endswith("*"):
+                message_text = message_text[1:-1]
+            elif message_text.startswith("_") and message_text.endswith("_"):
+                message_text = message_text[1:-1]
+            else:
+                break
+
+        regex_match = re.match(r"(?i)^(take|takes|steal|steals)( something|an item)? from bucket", message_text)
+        if not regex_match:
+            return None
+
+        if len(bucket_storage) > 0:
+            item = bucket_storage.pop(random.randrange(len(bucket_storage)))
+            drop_phrase = select_weighted(bucket_drop_phrases)
+            await message.channel.send(f"Bucket {drop_phrase} {item}")
+        else:
+            await message.channel.send("You tip Bucket over and shake him out, but there's nothing there :(")
+        
+        return True
+    
+    async def bucket_inventory(message):
+        # Don't respond to my own messages
+        if message.author == client.user:
+            return False
+
+        # Don't care about DMs
+        if isinstance(message.channel, discord.DMChannel):
+            return False
+
+        # Check if the message is a bucket take command, and if so, figure out what he's being given
+        message_text = message.content
+        while True:
+            if message_text.startswith("*") and message_text.endswith("*"):
+                message_text = message_text[1:-1]
+            elif message_text.startswith("_") and message_text.endswith("_"):
+                message_text = message_text[1:-1]
+            else:
+                break
+
+        regex_match = re.match(r"(?i)^(look|looks) in(to)? bucket", message_text)
+        if not regex_match:
+            return False
+
+        if len(bucket_storage) > 0:
+            await message.channel.send(f"Bucket currently contains: {'; '.join(bucket_storage)}")
+        else:
+            await message.channel.send("You tip Bucket over and shake him out, but there's nothing there :(")
         
         return True
 
@@ -146,6 +261,30 @@ def main():
     
     client.run(TOKEN)
 
+def bucket_give_processor(message):
+    give_options = ["give", "hand", "pass", "gives", "hands", "passes"]
+    give_options_piped = "|".join(give_options)
+    regex_match = re.match(fr"(?i)^({give_options_piped}) bucket (.*)", message)
+    if not regex_match:
+        return None
+    return regex_match[2]
+
+def bucket_put_processor(message: str):
+    put_options = ["put", "place", "puts", "places"]
+    put_options_piped = "|".join(put_options)
+    regex_match = re.match(fr"(?i)^({put_options_piped}) (.*) in(to)? bucket", message)
+    if not regex_match:
+        return None
+    return regex_match[2]
+
+def select_weighted(lst):
+    total = sum(item[1] for item in lst)
+    r = random.uniform(0, total)
+    upto = 0
+    for item, weight in lst:
+        if upto + weight >= r:
+            return item
+        upto += weight
 
 if __name__ == "__main__":
     main()
