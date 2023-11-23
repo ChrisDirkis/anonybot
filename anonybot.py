@@ -5,10 +5,16 @@ import random
 import datetime
 
 import discord
+import requests
 
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
+    MODES = os.getenv('MODES').split(',')
+    if not MODES:
+        MODES = ['ANON', 'BUCKET']
+    MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD') if os.getenv('MDB_POSE_THRESHOLD') else 0)
+
     emoji_timeout_seconds = 60 * 60
 
     intents = discord.Intents.default()
@@ -26,13 +32,11 @@ def main():
     async def on_ready():
         print(f'{client.user.name} connected')
 
-
     @client.event
     async def on_message(message):
-        funcs = [anonymous, bucket_give_item, bucket_take_item, bucket_inventory]
         for func in funcs:
             if await func(message):
-                #print(f"applying {func.__name__}")
+                # print(f"applied {func.__name__}")
                 break
 
     @no_self_respond(client)
@@ -122,7 +126,7 @@ def main():
             
             drop_phrase = select_weighted(bucket_drop_phrases)
 
-            await message.channel.send(f"Bucket {take_phrase} {item} but {drop_phrase} {to_remove}")
+            await message.reply(f"Bucket {take_phrase} {item} but {drop_phrase} {to_remove}")
         else:
             bucket_storage.append(item)
             
@@ -135,7 +139,7 @@ def main():
                 (", begrudgingly", 50),
             ]
             eat_phrase = select_weighted(bucket_eat_phrases)
-            await message.channel.send(f"Bucket {take_phrase} {item}{eat_phrase}")
+            await message.reply(f"Bucket {take_phrase} {item}{eat_phrase}")
         
         return True
 
@@ -151,9 +155,9 @@ def main():
         if len(bucket_storage) > 0:
             item = bucket_storage.pop(random.randrange(len(bucket_storage)))
             drop_phrase = select_weighted(bucket_drop_phrases)
-            await message.channel.send(f"Bucket {drop_phrase} {item}")
+            await message.reply(f"Bucket {drop_phrase} {item}")
         else:
-            await message.channel.send("You tip Bucket over and shake him out, but there's nothing there :(")
+            await message.reply("You tip Bucket over and shake him out, but there's nothing there :(")
         
         return True
     
@@ -162,33 +166,114 @@ def main():
     async def bucket_inventory(message):
         # Check if the message is a bucket inventory command
         message_text = strip_formatting(message.content)
-        regex_match = re.match(r"(?i)^(look|looks) in(to)? bucket", message_text)
+        regex_match = re.match(r"(?i)^(look|looks) in(to|side)? bucket", message_text)
         if not regex_match:
             return False
 
         if len(bucket_storage) > 0:
-            await message.channel.send(f"Bucket currently contains: {'; '.join(bucket_storage)}")
+            await message.reply(f"Bucket currently contains: {'; '.join(bucket_storage)}")
         else:
-            await message.channel.send("You tip Bucket over and shake him out, but there's nothing there :(")
+            await message.reply("You tip Bucket over and shake him out, but there's nothing there :(")
+        
+        return True
+
+    ai_url = "http://127.0.0.1:5000/v1/chat/completions"
+    ai_headers ={"Content-Type": "application/json"}
+
+    @no_self_respond(client)
+    @channel_only
+    async def million_dollars_but_answer(message):
+        message_text = strip_formatting(message.content)
+        regex_match = re.match(r"(?i)^would you rather|million dollars but", message_text)
+        if not regex_match:
+            return False
+
+        
+        instruction = f"Answer the following question in an interesting but succinct way, in the first person: \"{message_text}\""
+        data = {
+            "mode": "instruct",
+            "max_tokens": 500,
+            "messages": [{"role": "user", "content": instruction}]
+        }
+        
+        print("fetching wyr answer response")
+        response = requests.post(
+            ai_url, 
+            headers=ai_headers,
+            json=data,
+            verify=False
+        )
+        
+        await message.reply(f"{response.json()['choices'][0]['message']['content']}")
+        
+        return True
+
+    @no_self_respond(client)
+    @channel_only
+    async def million_dollars_but_pose(message):
+        if random.random() > MDB_POSE_THRESHOLD:
+            return False
+
+        instruction = "Pose a \"Would You Rather\" question. The condition should be weird and provoke discussion. The format should be \"Would you rather [x] or [y]?\". Don't be too verbose, just the question please."
+        data = {
+            "mode": "instruct",
+            "max_tokens": 500,
+            "messages": [{"role": "user", "content": instruction}],
+        }
+        
+        print("fetching wyr pose response")
+        response = requests.post(
+            ai_url, 
+            headers=ai_headers,
+            json=data,
+            verify=False
+        )
+
+        await message.channel.send(f"Bucket wonders: {response.json()['choices'][0]['message']['content']}")
+        
+        return True
+
+
+    @no_self_respond(client)
+    @channel_only
+    async def at_bucket(message):
+        message_text = strip_formatting(message.content)
+        regex_match = re.match(r"(?i)^\<\@" + str(client.user.id) + r"\>(.*)", message_text)
+        if not regex_match:
+            return False
+        
+        message_text = regex_match.group(1).strip()
+        
+        instruction = f"Respond succinctly to the following as if you are a sentinent bucket named Bucket, in the first person: \"{message_text}\""
+        data = {
+            "mode": "instruct",
+            "max_tokens": 500,
+            "messages": [{"role": "user", "content": instruction}]
+        }
+        
+        print("fetching at bucket response")
+        response = requests.post(
+            ai_url, 
+            headers=ai_headers,
+            json=data,
+            verify=False
+        )
+        
+        await message.reply(f"{response.json()['choices'][0]['message']['content']}")
         
         return True
 
     async def find_anon_channel(client, message):
-        guild = next((g for g in client.guilds if g.get_member(message.author.id)), None)
-        if guild:
-
-            guild = client.guilds[0]
-            channel = next((c for c in guild.channels if c.name == "anonymous"), None)
-
-            if channel:
-                return channel
-            else:
-                await message.channel.send("No #anonymous channel in the server")
-                return None
-        else:
+        guilds = [g for g in client.guilds if g.get_member(message.author.id)]
+        channels = [[c for c in guild.channels if c.name == "anonymous"] for guild in guilds]
+        channels = [channel for sublist in channels for channel in sublist]
+        if not channels:
+            message.channel.send("Couldn't find a matching #anonymous channel")
+            return None
+        if len(channels) > 1:
             await message.channel.send("More than one matching server, panic")
             return None
-
+        return channels[0]
 
     def clear_stale_author_emojis():
         expiry = datetime.datetime.utcnow() - datetime.timedelta(seconds=emoji_timeout_seconds)
@@ -211,8 +296,19 @@ def main():
             return "💩"
         else:
             return random.choice(emoji_options_copy)
-
     
+    funcs = []
+    if "ANON" in MODES:
+        funcs.append(anonymous)
+    if "BUCKET" in MODES:
+        funcs.append(bucket_give_item)
+        funcs.append(bucket_take_item)
+        funcs.append(bucket_inventory)
+    if "AI" in MODES:
+        funcs.append(million_dollars_but_pose)
+        funcs.append(million_dollars_but_answer)
+        funcs.append(at_bucket)
+
     client.run(TOKEN)
 
 def bucket_give_processor(message):
