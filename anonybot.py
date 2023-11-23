@@ -10,10 +10,8 @@ import requests
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
-    MODES = os.getenv('MODES').split(',')
-    if not MODES:
-        MODES = ['ANON', 'BUCKET']
-    MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD') if os.getenv('MDB_POSE_THRESHOLD') else 0)
+    MODES = os.getenv('MODES', "ANON,BUCKET").split(',')
+    MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD', "0"))
 
     emoji_timeout_seconds = 60 * 60
 
