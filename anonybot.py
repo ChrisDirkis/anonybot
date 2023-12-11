@@ -313,10 +313,11 @@ def main():
     @no_self_respond(client)
     @channel_only
     async def expand_twitter(message):
-        if not re.match(r"(?i)https?://twitter.com/[^/]+/status/\d+", message.content):
+        if not re.match(r"(?i)https?://twitter.com/[^/]+/status/\d+", message.content) or re.match(r"(?i)https?://x.com/[^/]+/status/\d+", message.content):
             return False
 
         expanded = message.content.replace("https://twitter.com/", "https://vxtwitter.com/")
+        expanded = expanded.replace("https://x.com/", "https://vxtwitter.com/")
         await reply_split(message, expanded)
         return True
 
