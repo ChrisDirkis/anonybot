@@ -10,7 +10,7 @@ import requests
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
-    MODES = os.getenv('MODES', "ANON,BUCKET").split(',')
+    MODES = os.getenv('MODES', "ANON,BUCKET,EXPAND").split(',')
     MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD', "0"))
 
     emoji_timeout_seconds = 60 * 60
@@ -24,7 +24,6 @@ def main():
     ]
     author_emojis = dict()
     in_use = set()
-
 
     @client.event
     async def on_ready():
@@ -177,6 +176,57 @@ def main():
 
     ai_url = "http://127.0.0.1:5000/v1/chat/completions"
     ai_headers ={"Content-Type": "application/json"}
+    thinking_react = "💭"
+
+    async def reply_split(message: discord.Message, response):
+        await message.add_reaction(thinking_react)
+
+        max_len = 1999
+
+        response = [response]
+        while len(response[-1]) > max_len:
+            last = response[-1]
+            del response[-1]
+
+            # lol, this can still be stupid, but hopefully less stupid
+            start_point = max_len if len(last) >= max_len * 2 else len(last) // 2 
+            for i in range(start_point, 0, -1):
+                if last[i] == " ":
+                    response.append(last[:i])
+                    response.append(last[i + 1:])
+                    break
+
+        for msg in response:
+            await message.reply(msg)
+
+        await message.remove_reaction(thinking_react, client.user)
+
+
+    def ask_bucket(message, context = None):
+
+        messages = []
+        if context:
+            messages += context
+        messages.append({"role": "user", "content": message})
+        
+        print(messages)
+
+        data = {
+            "mode": "chat-instruct",
+            "character": "Bucket",
+            "max_tokens": 500,
+            "messages": messages
+        }
+        
+        response = requests.post(
+            ai_url, 
+            headers=ai_headers,
+            json=data,
+            verify=False
+        )
+
+        return strip_quotes(response.json()['choices'][0]['message']['content'])
+
 
     @no_self_respond(client)
     @channel_only
@@ -186,80 +236,101 @@ def main():
         if not regex_match:
             return False
 
-        
-        instruction = f"Answer the following question in an interesting but succinct way, in the first person: \"{message_text}\""
-        data = {
-            "mode": "instruct",
-            "max_tokens": 500,
-            "messages": [{"role": "user", "content": instruction}]
-        }
-        
-        print("fetching wyr answer response")
-        response = requests.post(
-            ai_url, 
-            headers=ai_headers,
-            json=data,
-            verify=False
-        )
-        
-        await message.reply(f"{response.json()['choices'][0]['message']['content']}")
+        async with message.channel.typing():
+            await reply_split(message, ask_bucket(message_text))
         
         return True
 
+
     @no_self_respond(client)
-    @channel_only
+    @channel_only 
     async def million_dollars_but_pose(message):
         if random.random() > MDB_POSE_THRESHOLD:
             return False
 
         instruction = "Pose a \"Would You Rather\" question. The condition should be weird and provoke discussion. The format should be \"Would you rather [x] or [y]?\". Don't be too verbose, just the question please."
-        data = {
-            "mode": "instruct",
-            "max_tokens": 500,
-            "messages": [{"role": "user", "content": instruction}],
-        }
+        async with message.channel.typing():
+            await reply_split(message, f"Bucket wonders: {ask_bucket(instruction)}")
         
-        print("fetching wyr pose response")
-        response = requests.post(
-            ai_url, 
-            headers=ai_headers,
-            json=data,
-            verify=False
-        )
+        return True
 
-        await message.channel.send(f"Bucket wonders: {response.json()['choices'][0]['message']['content']}")
+
+    async def get_reply(message: discord.Message) -> discord.Message or None:
+        if not message.reference:
+            return None
+
+        if message.reference.cached_message:
+            return message.reference.cached_message
+        else:
+            return await message.channel.fetch_message(message.reference.message_id)
+
+
+    @no_self_respond(client)
+    @channel_only
+    async def reply_to_bucket(message: discord.Message):
+
+        if not message.reference:
+            return False
+
+        referenced_message = await get_reply(message)
+        if referenced_message.author.id != client.user.id:
+            return False
+
+        name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
+        reply_chain = []
+        while referenced_message:
+            role = "assistant" if referenced_message.author.id == client.user.id else "user" #referenced_message.author.display_name
+            message_text = re.sub(name_pattern, "Bucket,", referenced_message.content)
+            reply_chain.append({"role": role, "content": message_text})
+            referenced_message = await get_reply(referenced_message)
+        reply_chain.reverse()    
+        
+        name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
+        message_text = strip_formatting(message.content)
+        message_text = re.sub(name_pattern, "Bucket,", message_text)
+
+        async with message.channel.typing():
+            await reply_split(message, ask_bucket(message_text, context=reply_chain))
+        
+        return True
+
+    @no_self_respond(client)
+    @channel_only
+    async def at_bucket(message):
+        name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
+        message_text = strip_formatting(message.content)
+        regex_match = re.match(name_pattern, message_text)
+        if not regex_match:
+            return False
+
+        message_text = re.sub(name_pattern, "Bucket,", message_text)
+        async with message.channel.typing():
+            await reply_split(message, ask_bucket(message_text))
         
         return True
 
 
     @no_self_respond(client)
     @channel_only
-    async def at_bucket(message):
-        message_text = strip_formatting(message.content)
-        regex_match = re.match(r"(?i)^\<\@" + str(client.user.id) + r"\>(.*)", message_text)
-        if not regex_match:
+    async def expand_twitter(message):
+        if not re.match(r"(?i)https?://twitter.com/[^/]+/status/\d+", message.content):
             return False
-        
-        message_text = regex_match.group(1).strip()
-        
-        instruction = f"Respond succinctly to the following as if you are a sentinent bucket named Bucket, in the first person: \"{message_text}\""
-        data = {
-            "mode": "instruct",
-            "max_tokens": 500,
-            "messages": [{"role": "user", "content": instruction}]
-        }
-        
-        print("fetching at bucket response")
-        response = requests.post(
-            ai_url, 
-            headers=ai_headers,
-            json=data,
-            verify=False
-        )
-        
-        await message.reply(f"{response.json()['choices'][0]['message']['content']}")
-        
+
+        expanded = message.content.replace("https://twitter.com/", "https://vxtwitter.com/")
+        await reply_split(message, expanded)
         return True
+
+
+    @no_self_respond(client)
+    @channel_only
+    async def expand_tiktok(message):
+        if not re.match(r"(?i)https?://(www.)?tiktok.com/.*", message.content):
+            return False
+            
+        expanded = message.content.replace("tiktok.com", "vxtiktok.com")
+        await reply_split(message, expanded)
+        return True
+
 
     async def find_anon_channel(client, message):
         guilds = [g for g in client.guilds if g.get_member(message.author.id)]
@@ -272,6 +343,7 @@ def main():
             await message.channel.send("More than one matching server, panic")
             return None
         return channels[0]
+
 
     def clear_stale_author_emojis():
         expiry = datetime.datetime.utcnow() - datetime.timedelta(seconds=emoji_timeout_seconds)
@@ -286,26 +358,29 @@ def main():
 
 
     def random_new_emoji():
-        emoji_options_copy = emoji_options.copy()
-        for emoji in in_use:
-            emoji_options_copy.remove(emoji)
-        if len(emoji_options_copy) == 0:
+        remaining = set(emoji_options) - set(in_use)
+        if len(remaining) == 0:
             print("No unused emoji left!")
             return "💩"
         else:
-            return random.choice(emoji_options_copy)
+            return random.choice(remaining)
     
+
     funcs = []
     if "ANON" in MODES:
         funcs.append(anonymous)
+    if "EXPAND" in MODES:
+        funcs.append(expand_twitter)
+        funcs.append(expand_tiktok)
     if "BUCKET" in MODES:
         funcs.append(bucket_give_item)
         funcs.append(bucket_take_item)
         funcs.append(bucket_inventory)
     if "AI" in MODES:
-        funcs.append(million_dollars_but_pose)
-        funcs.append(million_dollars_but_answer)
+        funcs.append(reply_to_bucket)
         funcs.append(at_bucket)
+        funcs.append(million_dollars_but_answer)
+        funcs.append(million_dollars_but_pose)
 
     client.run(TOKEN)
 
@@ -334,11 +409,20 @@ def select_weighted(lst):
             return item
         upto += weight
 
+
 def strip_formatting(message):
     while True:
         if message.startswith("*") and message.endswith("*"):
             message = message[1:-1]
         elif message.startswith("_") and message.endswith("_"):
+            message = message[1:-1]
+        else:
+            break
+    return message
+
+def strip_quotes(message):
+    while True:
+        if message.startswith("\"") and message.endswith("\""):
             message = message[1:-1]
         else:
             break
