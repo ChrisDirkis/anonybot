@@ -323,10 +323,10 @@ def main():
         content = message.content
         any_expanded = False
         for expansion in expansions:
-            if not re.match(expansion["regex"], content):
+            if not re.match(expansion.regex, content):
                 continue
             any_expanded = True
-            content = content.replace(expansion["fr"], expansion["to"])
+            content = content.replace(expansion.fr, expansion.to)
             
         if not any_expanded:
             return False
