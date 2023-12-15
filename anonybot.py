@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import random
 import datetime
+from collections import namedtuple
 
 import discord
 import requests
@@ -309,27 +310,28 @@ def main():
         
         return True
 
+    expansion = namedtuple("expansion", ["regex", "fr", "to"])
+    expansions = [
+        expansion(r"(?i)https?://twitter.com/[^/]+/status/\d+", "twitter.com/", "vxtwitter.com/"),
+        expansion(r"(?i)https?://x.com/[^/]+/status/\d+", "x.com/", "vxtwitter.com/"),
+        expansion(r"(?i)https?://(www.)?tiktok.com/", "tiktok.com/", "vxtiktok.com/"),
+    ]
 
     @no_self_respond(client)
     @channel_only
-    async def expand_twitter(message):
-        if not re.match(r"(?i)https?://twitter.com/[^/]+/status/\d+", message.content) or re.match(r"(?i)https?://x.com/[^/]+/status/\d+", message.content):
-            return False
-
-        expanded = message.content.replace("https://twitter.com/", "https://vxtwitter.com/")
-        expanded = expanded.replace("https://x.com/", "https://vxtwitter.com/")
-        await reply_split(message, expanded)
-        return True
-
-
-    @no_self_respond(client)
-    @channel_only
-    async def expand_tiktok(message):
-        if not re.match(r"(?i)https?://(www.)?tiktok.com/.*", message.content):
-            return False
+    async def expand(message):
+        content = message.content
+        any_expanded = False
+        for expansion in expansions:
+            if not re.match(expansion["regex"], content):
+                continue
+            any_expanded = True
+            content = content.replace(expansion["fr"], expansion["to"])
             
-        expanded = message.content.replace("tiktok.com", "vxtiktok.com")
-        await reply_split(message, expanded)
+        if not any_expanded:
+            return False
+        
+        await reply_split(message, content)
         return True
 
 
@@ -371,8 +373,7 @@ def main():
     if "ANON" in MODES:
         funcs.append(anonymous)
     if "EXPAND" in MODES:
-        funcs.append(expand_twitter)
-        funcs.append(expand_tiktok)
+        funcs.append(expand)
     if "BUCKET" in MODES:
         funcs.append(bucket_give_item)
         funcs.append(bucket_take_item)
