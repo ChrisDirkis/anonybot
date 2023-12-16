@@ -7,12 +7,14 @@ from collections import namedtuple
 
 import discord
 import requests
+import owo
 
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
     MODES = os.getenv('MODES', "ANON,BUCKET,EXPAND").split(',')
     MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD', "0"))
+    HORNY_CHANNEL_IDS = os.getenv('HORNY_CHANNEL_IDS', "").split(',')
 
     emoji_timeout_seconds = 60 * 60
 
@@ -203,7 +205,16 @@ def main():
         await message.remove_reaction(thinking_react, client.user)
 
 
-    def ask_bucket(message, context = None):
+    def is_owo(string: str):
+        string = string.lower()
+        if "owo" in string:
+            return True
+        if "uwu" in string:
+            return True
+        return False
+
+
+    def ask_bucket(message, character="Bucket", context = None):
 
         messages = []
         if context:
@@ -214,7 +225,7 @@ def main():
 
         data = {
             "mode": "chat-instruct",
-            "character": "Bucket",
+            "character": character,
             "max_tokens": 500,
             "messages": messages
         }
@@ -226,7 +237,12 @@ def main():
             verify=False
         )
 
-        return strip_quotes(response.json()['choices'][0]['message']['content'])
+        response = strip_quotes(response.json()['choices'][0]['message']['content'])
+
+        if any(is_owo(m["content"]) for m in messages):
+            response = owo.substitute(response)
+
+        return response
 
 
     @no_self_respond(client)
@@ -277,6 +293,8 @@ def main():
         if referenced_message.author.id != client.user.id:
             return False
 
+        character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
+
         name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
         reply_chain = []
         while referenced_message:
@@ -291,7 +309,7 @@ def main():
         message_text = re.sub(name_pattern, "Bucket,", message_text)
 
         async with message.channel.typing():
-            await reply_split(message, ask_bucket(message_text, context=reply_chain))
+            await reply_split(message, ask_bucket(message_text, character=character, context=reply_chain))
         
         return True
 
@@ -304,9 +322,11 @@ def main():
         if not regex_match:
             return False
 
+        character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
+
         message_text = re.sub(name_pattern, "Bucket,", message_text)
         async with message.channel.typing():
-            await reply_split(message, ask_bucket(message_text))
+            await reply_split(message, ask_bucket(message_text, character=character))
         
         return True
 
