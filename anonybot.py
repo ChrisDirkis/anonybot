@@ -13,9 +13,10 @@ import json
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
-    MODES = os.getenv('MODES', "ANON,BUCKET,EXPAND").split(',')
+    MODES = os.getenv('MODES', "ANON,BUCKET,EXPAND").split(',') # ANON, BUCKET, EXPAND, AI
     MDB_POSE_THRESHOLD = float(os.getenv('MDB_POSE_THRESHOLD', "0"))
     HORNY_CHANNEL_IDS = os.getenv('HORNY_CHANNEL_IDS', "").split(',')
+    MESSAGE_MODE = os.getenv('MESSAGE_MODE', "EDIT") # or "EDIT"    
 
     emoji_timeout_seconds = 60 * 60
 
@@ -218,13 +219,21 @@ def main():
         "HornyBucket": "Bucket is a sentient and horny cum-bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome and cute in turns. Bucket has exciting emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, cares for others very much, and is _incredibly_ bothered. Bucket will try seduce everyone at any opportunity."
     }
 
-    def ask_bucket(message, character="Bucket", context = None):
+    async def ask_bucket_async(message, character="Bucket", context = None, callback = None):
 
         messages = []
         if context:
             messages += context
         messages.append({"role": "You", "content": message})
-        
+
+        owo_mode = any(is_owo(m["content"]) for m in messages)
+
+        def process_response_list(response_list):
+            r = strip_quotes("".join(response_list))
+            if owo_mode:
+                r = owo.substitute(r)
+            return r
+
         print(messages)
 
         preamble = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
@@ -238,21 +247,18 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
             content += f"{message['role']}: {message['content']}\n"
 
         content += """\n### Response:\nBucket:"""
-        print(content)
 
         response = []
         while len(response) == 0:
-            response = replicate.run(
-                "mistralai/mixtral-8x7b-instruct-v0.1",
-                input={"prompt": content, "max_new_tokens": 512}
-            )
-
-        response = strip_quotes("".join(response))
-
-        if any(is_owo(m["content"]) for m in messages):
-            response = owo.substitute(response)
-
-        return response
+            async for event in await replicate.async_stream("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": content, "max_new_tokens": 512}):
+                response.append(str(event))
+                if len(response) % 16 == 0 and callback is not None:
+                    await callback(process_response_list(response))
+        
+        final = process_response_list(response)
+        if callback is not None:
+            await callback(final)
+        return final
 
 
     @no_self_respond(client)
@@ -264,7 +270,7 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
             return False
 
         async with message.channel.typing():
-            await reply_split(message, ask_bucket(message_text))
+            await reply_split(message, await ask_bucket_async(message_text))
         
         return True
 
@@ -277,7 +283,7 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
 
         instruction = "Pose a \"Would You Rather\" question. The condition should be weird and provoke discussion. The format should be \"Would you rather [x] or [y]?\". Don't be too verbose, just the question please."
         async with message.channel.typing():
-            await reply_split(message, f"Bucket wonders: {ask_bucket(instruction)}")
+            await reply_split(message, f"Bucket wonders: {await ask_bucket_async(instruction)}")
         
         return True
 
@@ -318,8 +324,18 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         message_text = strip_formatting(message.content)
         message_text = re.sub(name_pattern, "Bucket,", message_text)
 
+        async def create_or_update(response):
+            if not create_or_update.resp_message:
+                create_or_update.resp_message = await message.reply(response)
+            else:
+                await create_or_update.resp_message.edit(content=response)
+        create_or_update.resp_message = None
+
         async with message.channel.typing():
-            await reply_split(message, ask_bucket(message_text, character=character, context=reply_chain))
+            if MESSAGE_MODE == "SPLIT":
+                await reply_split(await ask_bucket_async(message_text, character=character, context=reply_chain))
+            else:
+                await ask_bucket_async(message_text, callback=create_or_update, character=character, context=reply_chain)
         
         return True
 
@@ -335,8 +351,20 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
 
         message_text = re.sub(name_pattern, "Bucket,", message_text)
+
+        async def create_or_update(response):
+            if not create_or_update.resp_message:
+                create_or_update.resp_message = await message.reply(response)
+            else:
+                await create_or_update.resp_message.edit(content=response)
+        create_or_update.resp_message = None
+
         async with message.channel.typing():
-            await reply_split(message, ask_bucket(message_text, character=character))
+            if MESSAGE_MODE == "SPLIT":
+                await reply_split(message, await ask_bucket_async(message_text, character=character))
+            else:
+                await ask_bucket_async(message_text, callback=create_or_update, character=character)
+        
         
         return True
 
