@@ -243,7 +243,7 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         response = []
         while len(response) == 0:
             response = replicate.run(
-                "tomasmcm/zephyr-7b-beta:961cd6665b811d0c43c0b9488b6dfa85ff5c7bfb875e93b4533e4c7f96c7c526",
+                "mistralai/mixtral-8x7b-instruct-v0.1",
                 input={"prompt": content, "max_new_tokens": 512}
             )
 
