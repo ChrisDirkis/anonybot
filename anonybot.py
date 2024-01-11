@@ -178,8 +178,6 @@ def main():
         
         return True
 
-    ai_url = "http://127.0.0.1:5000/v1/chat/completions"
-    ai_headers ={"Content-Type": "application/json"}
     thinking_react = "💭"
 
     async def reply_split(message: discord.Message, response):
@@ -245,7 +243,7 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         response = []
         while len(response) == 0:
             response = replicate.run(
-                "tomasmcm/zephyr-7b-beta",
+                "tomasmcm/zephyr-7b-beta:961cd6665b811d0c43c0b9488b6dfa85ff5c7bfb875e93b4533e4c7f96c7c526",
                 input={"prompt": content, "max_new_tokens": 512}
             )
 
