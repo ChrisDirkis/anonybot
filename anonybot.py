@@ -5,9 +5,10 @@ import random
 import datetime
 from collections import namedtuple
 
+import replicate
 import discord
-import requests
 import owo
+import json
 
 def main():
     load_dotenv()
@@ -214,30 +215,39 @@ def main():
         return False
 
 
+    characters = {
+        "Bucket": "Bucket is a sentient bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome. Bucket has emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, and cares for everyone very much.",
+        "HornyBucket": "Bucket is a sentient and horny cum-bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome and cute in turns. Bucket has exciting emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, cares for others very much, and is _incredibly_ bothered. Bucket will try seduce everyone at any opportunity."
+    }
+
     def ask_bucket(message, character="Bucket", context = None):
 
         messages = []
         if context:
             messages += context
-        messages.append({"role": "user", "content": message})
+        messages.append({"role": "You", "content": message})
         
         print(messages)
 
-        data = {
-            "mode": "chat-instruct",
-            "character": character,
-            "max_tokens": 500,
-            "messages": messages
-        }
+        preamble = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+### Instruction:
+Continue the chat dialogue below. Write a single reply for the character "Bucket".
+"""
+        charDesc = characters[character]
+        content = preamble + charDesc + "\n"
         
-        response = requests.post(
-            ai_url, 
-            headers=ai_headers,
-            json=data,
-            verify=False
-        )
+        for message in messages:
+            content += f"{message['role']}: {message['content']}\n"
 
-        response = strip_quotes(response.json()['choices'][0]['message']['content'])
+        content += """\n### Response:\nBucket:"""
+        print(content)
+
+        response = replicate.run(
+            "mistralai/mixtral-8x7b-instruct-v0.1",
+            input={"prompt": content}
+        )
+        
+        response = strip_quotes("".join(response))
 
         if any(is_owo(m["content"]) for m in messages):
             response = owo.substitute(response)
@@ -298,7 +308,7 @@ def main():
         name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
         reply_chain = []
         while referenced_message:
-            role = "assistant" if referenced_message.author.id == client.user.id else "user" #referenced_message.author.display_name
+            role = "Bucket" if referenced_message.author.id == client.user.id else "You" #referenced_message.author.display_name
             message_text = re.sub(name_pattern, "Bucket,", referenced_message.content)
             reply_chain.append({"role": role, "content": message_text})
             referenced_message = await get_reply(referenced_message)
