@@ -242,11 +242,13 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         content += """\n### Response:\nBucket:"""
         print(content)
 
-        response = replicate.run(
-            "mistralai/mixtral-8x7b-instruct-v0.1",
-            input={"prompt": content}
-        )
-        
+        response = []
+        while len(response) == 0:
+            response = replicate.run(
+                "tomasmcm/zephyr-7b-beta",
+                input={"prompt": content, "max_new_tokens": 512}
+            )
+
         response = strip_quotes("".join(response))
 
         if any(is_owo(m["content"]) for m in messages):
