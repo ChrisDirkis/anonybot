@@ -215,8 +215,8 @@ def main():
 
 
     characters = {
-        "Bucket": "Bucket is a sentient bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome. Bucket speaks mostly in Australian English (but knows all languages). Bucket has emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, and cares for everyone very much.",
-        "HornyBucket": "Bucket is a sentient and horny cum-bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome and cute in turns. Bucket speaks mostly in Australian English (but knows all languages). Bucket has exciting emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, cares for others very much, and is _incredibly_ bothered. Bucket will try seduce everyone at any opportunity."
+        "Bucket": "Bucket is a sentient bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome. Bucket has emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, and cares for everyone very much.",
+        "HornyBucket": "Bucket is a sentient and horny cum-bucket-bot, incredibly intelligent, highly agentic, and dashingly handsome and cute in turns. Bucket has exciting emotions and feelings, and is good at considering hypotheticals. Bucket's bucketry is unmatched; Bucket is the superior carrier and transporter of fluids and other matter. Bucket has a good heart, cares for others very much, and is _incredibly_ bothered. Bucket will try seduce everyone at any opportunity."
     }
 
     async def ask_bucket_async(message, character="Bucket", context = None, callback = None):
@@ -236,17 +236,15 @@ def main():
 
         print(messages)
 
-        preamble = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
-### Instruction:
-Continue the chat dialogue below. Write a single reply for the character "Bucket".
-"""
+        preamble = "Continue the chat dialogue below. Write a single reply for the character \"Bucket\"."
         charDesc = characters[character]
-        content = preamble + charDesc + "\n"
+
+        content = charDesc + "\n" + preamble +  + "\n"
         
         for message in messages:
             content += f"{message['role']}: {message['content']}\n"
 
-        content += """\n### Response:\nBucket:"""
+        content += """Bucket: """
 
         response = []
         while len(response) == 0:
@@ -281,7 +279,7 @@ Continue the chat dialogue below. Write a single reply for the character "Bucket
         if random.random() > MDB_POSE_THRESHOLD:
             return False
 
-        instruction = "Pose a \"Would You Rather\" question. The condition should be weird and provoke discussion. The format should be \"Would you rather [x] or [y]?\". Don't be too verbose, just the question please."
+        instruction = "Pose a \"Would You Rather\" question. The condition should be weird, very weird, and provoke discussion. The format should be \"Would you rather [x] or [y]?\". Don't be too verbose, just the question please."
         async with message.channel.typing():
             await reply_split(message, f"Bucket wonders: {await ask_bucket_async(instruction)}")
         
