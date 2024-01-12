@@ -180,19 +180,18 @@ def main():
         return True
 
     thinking_react = "💭"
+    max_message_len = 1999
 
     async def reply_split(message: discord.Message, response):
         await message.add_reaction(thinking_react)
 
-        max_len = 1999
-
         response = [response]
-        while len(response[-1]) > max_len:
+        while len(response[-1]) > max_message_len:
             last = response[-1]
             del response[-1]
 
             # lol, this can still be stupid, but hopefully less stupid
-            start_point = max_len if len(last) >= max_len * 2 else len(last) // 2 
+            start_point = max_message_len if len(last) >= max_message_len * 2 else len(last) // 2 
             for i in range(start_point, 0, -1):
                 if last[i] == " ":
                     response.append(last[:i])
@@ -328,6 +327,8 @@ def main():
         message_text = re.sub(name_pattern, "Bucket,", message_text)
 
         async def create_or_update(response):
+            if len(response) > max_message_len:
+                response = response[:max_message_len]
             if not create_or_update.resp_message:
                 create_or_update.resp_message = await message.reply(response)
             else:
@@ -356,6 +357,8 @@ def main():
         message_text = re.sub(name_pattern, "Bucket,", message_text)
 
         async def create_or_update(response):
+            if len(response) > max_message_len:
+                response = response[:max_message_len]
             if not create_or_update.resp_message:
                 create_or_update.resp_message = await message.reply(response)
             else:
