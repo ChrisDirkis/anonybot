@@ -239,7 +239,7 @@ def main():
         preamble = "Continue the chat dialogue below. Write a single reply for the character \"Bucket\"."
         charDesc = characters[character]
 
-        content = charDesc + "\n" + preamble +  + "\n"
+        content = charDesc + "\n" + preamble + "\n"
         
         for message in messages:
             content += f"{message['role']}: {message['content']}\n"
