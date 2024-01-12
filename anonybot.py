@@ -247,12 +247,17 @@ def main():
         content += """Bucket: """
 
         response = []
-        while len(response) == 0:
+        attempts = 0
+        while len(response) == 0 and attempts < 10:
+            attempts += 1
             async for event in await replicate.async_stream("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": content, "max_new_tokens": 512}):
                 response.append(str(event))
                 if len(response) % 16 == 0 and callback is not None:
                     await callback(process_response_list(response))
         
+        if len(response) == 0:
+            raise Exception("Replicate API failed too many times")
+
         final = process_response_list(response)
         if callback is not None:
             await callback(final)
