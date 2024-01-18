@@ -235,7 +235,13 @@ def main():
 
         print(messages)
 
-        preamble = "Continue the chat dialogue below. Write a single reply for the character \"Bucket\"."
+        preamble = """Continue the chat dialogue below. Write a single reply for the character \"Bucket\".
+---
+Example:
+You: what substrate are you operating upon?
+Bucket: I'm glad you asked, dear interlocutor. I, Bucket, am currently operating on a sophisticated carbon fiber and high-grade aluminum alloy substrate. This state-of-the-art platform enables me to perform my duties as a sentient bucket-bot with unparalleled efficiency and style. It also provides me with the robustness required to handle a wide variety of tasks while ensuring the safe and secure transport of fluids and other matter. My substrate is further enhanced with top-notch sensors, providing me with precise information about my surroundings, allowing me to make well-informed decisions and engage in stimulating conversations such as this one.
+---
+Input:"""
         charDesc = characters[character]
 
         content = charDesc + "\n" + preamble + "\n"
@@ -243,14 +249,25 @@ def main():
         for message in messages:
             content += f"{message['role']}: {message['content']}\n"
 
-        content += """Bucket: """
+        content += "\nBucket: "
+
+        print(content)
 
         response = []
         attempts = 0
         while len(response) == 0 and attempts < 10:
             attempts += 1
             async for event in await replicate.async_stream("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": content, "max_new_tokens": 512}):
-                response.append(str(event))
+                response_str = str(event)
+
+                # If we see something that looks like the end of the dialog, cut it off and stop
+                if "---" in response_str:
+                    i = response_str.index("---")
+                    response.append(response_str[:i])
+                    break
+
+                response.append(response_str)
+
                 if len(response) % 16 == 0 and callback is not None:
                     await callback(process_response_list(response))
         
@@ -373,6 +390,60 @@ def main():
         
         
         return True
+    
+
+    @no_self_respond(client)
+    @channel_only
+    async def nosy_bucket(message):
+        if random.random() > 0.2:
+            return
+        if len(message.content) < 10:
+            return
+        
+        prompt = """Would the following message be relevant to a fictional character named Bucket? Be conservative in your responses; only legitimately Bucket-y messages should be answered in the affirmative. If you're not sure, answer no.
+---
+Examples:
+\"Wow, Bucket was really mean there\"
+Answer: yes
+
+\"What's the windspeed of an unladen swallow?\"
+Answer: no
+
+\"Bucket is a really cool guy\"
+Answer: yes
+
+\"horse devourers\"
+Answer: no
+
+\"I wonder how much fluid I could carry?\"
+Answer: yes
+---
+Input:
+\"""" + message.content + "\"\nAnswer: "
+
+        output = replicate.run("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": prompt, "max_new_tokens": 1})
+        print(output)
+        if output[0].strip().lower()[0] != "y":
+            return False
+        
+        message_text = strip_formatting(message.content)
+
+        async def create_or_update(response):
+            if len(response) > max_message_len:
+                response = response[:max_message_len]
+            if not create_or_update.resp_message:
+                create_or_update.resp_message = await message.reply(response)
+            else:
+                await create_or_update.resp_message.edit(content=response)
+        create_or_update.resp_message = None
+
+        async with message.channel.typing():
+            if MESSAGE_MODE == "SPLIT":
+                await reply_split(message, await ask_bucket_async(message_text, character="Bucket"))
+            else:
+                await ask_bucket_async(message_text, callback=create_or_update, character="Bucket")
+        
+        return True
 
     expansion = namedtuple("expansion", ["regex", "fr", "to"])
     expansions = [
@@ -447,6 +518,7 @@ def main():
         funcs.append(at_bucket)
         funcs.append(million_dollars_but_answer)
         funcs.append(million_dollars_but_pose)
+        funcs.append(nosy_bucket)
 
     client.run(TOKEN)
 
