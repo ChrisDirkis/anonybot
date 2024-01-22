@@ -395,12 +395,12 @@ Input:\n"""
     @no_self_respond(client)
     @channel_only
     async def nosy_bucket(message):
-        if random.random() > 0.2:
+        if random.random() > 0.1:
             return
         if len(message.content) < 10:
             return
         
-        prompt = """Would the following message be relevant to a fictional character named Bucket? Be conservative in your responses; only legitimately Bucket-y messages should be answered in the affirmative. If you're not sure, answer no.
+        prompt = """Would the following message be relevant to a fictional character named Bucket? Be conservative in your responses; only legitimately Bucket-y messages should be answered in the affirmative. If you're not sure, answer no. Only answer yes if the prompt specifically refers to buckets or bucket-themed things. Mostly no. 
 ---
 Examples:
 \"Wow, Bucket was really mean there\"
