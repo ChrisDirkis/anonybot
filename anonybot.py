@@ -10,6 +10,8 @@ import discord
 import owo
 import json
 
+import requests
+
 def main():
     load_dotenv()
     TOKEN = os.getenv('BOT_TOKEN')
@@ -365,8 +367,8 @@ Input:\n"""
     async def at_bucket(message):
         name_pattern = r"(?i)\<\@" + str(client.user.id) + r"\>"
         message_text = strip_formatting(message.content)
-        regex_match = re.match(name_pattern, message_text)
-        if not regex_match:
+        regex_matches = re.findall(name_pattern, message_text)
+        if not regex_matches:
             return False
 
         character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
@@ -445,11 +447,19 @@ Input:
         
         return True
 
-    expansion = namedtuple("expansion", ["regex", "fr", "to"])
+
+    def twitter_condition(message, expansion):
+        url = re.findall(expansion.regex, message.content)[0]
+        id = url.split("/")[-1]
+        info = requests.get(f"https://api.vxtwitter.com/Twitter/status/{id}").json()
+        return any(media["type"] == "video" for media in info["media_extended"])
+
+
+    expansion = namedtuple("expansion", ["regex", "fr", "to", "condition"])
     expansions = [
-        expansion(r"(?i)https?://twitter.com/[^/]+/status/\d+", "twitter.com/", "vxtwitter.com/"),
-        expansion(r"(?i)https?://x.com/[^/]+/status/\d+", "x.com/", "vxtwitter.com/"),
-        expansion(r"(?i)https?://(www.)?tiktok.com/", "tiktok.com/", "vxtiktok.com/"),
+        expansion(r"(?i)https?://twitter.com/[^/]+/status/\d+", "twitter.com/", "vxtwitter.com/", twitter_condition),
+        expansion(r"(?i)https?://x.com/[^/]+/status/\d+", "x.com/", "vxtwitter.com/", twitter_condition),
+        expansion(r"(?i)https?://(www.)?tiktok.com/", "tiktok.com/", "vxtiktok.com/", None),
     ]
 
     @no_self_respond(client)
@@ -458,7 +468,9 @@ Input:
         content = message.content
         any_expanded = False
         for expansion in expansions:
-            if not re.match(expansion.regex, content):
+            if not re.findall(expansion.regex, content):
+                continue
+            if not expansion.condition or not expansion.condition(message, expansion):
                 continue
             any_expanded = True
             content = content.replace(expansion.fr, expansion.to)
