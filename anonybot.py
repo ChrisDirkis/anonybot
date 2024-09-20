@@ -259,17 +259,10 @@ Input:\n"""
         while len(response) == 0 and attempts < 10:
             attempts += 1
             print("requesting")
-            first = True
             async for event in await replicate.async_stream("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": content, "prompt_template": "<s>{prompt}", "max_new_tokens": 512, "temperature": 1}):
 
                 #print(f"event type: {event.event}, content: {str(event)}")
                 response_str = str(event)
-
-                # [2024-04-13] replicate has a bug where it accumulates the first event with newlines somehow,
-                # so this is a bodge workaround
-                if first or True:
-                    response_str = response_str.split("\n")[-1]
-                    first = False
 
                 # If we see something that looks like the end of the dialog, cut it off and stop
                 if "---" in response_str:
