@@ -455,7 +455,7 @@ Input:
         url = re.findall(expansion.regex, message.content)[0]
         id = url.split("/")[-1]
         info = requests.get(f"https://api.vxtwitter.com/Twitter/status/{id}").json()
-        return any(media["type"] == "video" for media in info["media_extended"])
+        return any(media["type"] == "video" for media in info["media_extended"]) or info["qrt"] != None or len(info["media_extended"]) > 1
 
 
     expansion = namedtuple("expansion", ["regex", "fr", "to", "condition"])
