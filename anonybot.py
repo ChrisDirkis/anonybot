@@ -406,7 +406,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
         if len(message.content) < 10:
             return
         
-        prompt = """Would the following message be relevant to a fictional character named Bucket? Be conservative in your responses; only legitimately Bucket-y messages should be answered in the affirmative. If you're not sure, answer no. Only answer yes if the prompt specifically refers to buckets or bucket-themed things. Mostly no. 
+        prompt = """Would the following message be relevant to a fictional character named Bucket? Be conservative in your responses; only legitimately Bucket-y messages should be answered in the affirmative. If you're not sure, answer no. Only answer yes if the prompt specifically refers to buckets or bucket-themed things. Mostly no. No preamble, do not write "Answer: " or anything similar 
 ---
 Examples:
 \"Wow, Bucket was really mean there\"
@@ -427,7 +427,7 @@ Answer: yes
 Input:
 \"""" + message.content + "\"\nAnswer: "
 
-        output = replicate.run("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": prompt, "prompt_template": "<s>{prompt}", "max_new_tokens": 512, "temperature": 1})
+        output = replicate.run("meta/meta-llama-3-70b-instruct", input={ "prompt": prompt, "max_new_tokens": 8 })
         print(output)
         if output[0].strip().lower()[0] != "y":
             return False
