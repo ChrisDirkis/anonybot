@@ -236,22 +236,15 @@ def main():
 
         print(messages)
 
-        preamble = """Continue the chat dialogue below. Write a single reply for the character \"Bucket\".
----
-Example:
-You: what substrate are you operating upon?
-Bucket: I'm glad you asked. I, Bucket, am currently operating on a sophisticated carbon fiber and high-grade aluminum alloy substrate. This state-of-the-art platform enables me to perform my duties as a sentient bucket-bot with unparalleled efficiency and style. It also provides me with the robustness required to handle a wide variety of tasks while ensuring the safe and secure transport of fluids and other matter. My substrate is further enhanced with top-notch sensors, providing me with precise information about my surroundings, allowing me to make well-informed decisions and engage in stimulating conversations such as this one.
----
-Input:\n"""
         charDesc = characters[character]
-
-        content = charDesc + "\n" + preamble + "\n"
-        
-        for message in messages:
-            content += f"{message['role']}: {message['content']}\n"
-
-        content += "\nBucket: "
-
+        examples = [
+            [
+                "User: what substrate are you operating upon?",
+                "Bucket: I'm glad you asked. I, Bucket, am currently operating on a sophisticated carbon fiber and high-grade aluminum alloy substrate. This state-of-the-art platform enables me to perform my duties as a sentient bucket-bot with unparalleled efficiency and style. It also provides me with the robustness required to handle a wide variety of tasks while ensuring the safe and secure transport of fluids and other matter. My substrate is further enhanced with top-notch sensors, providing me with precise information about my surroundings, allowing me to make well-informed decisions and engage in stimulating conversations such as this one."
+            ],
+        ]
+        examplesString = "\n---\n".join(["\n".join(example) for example in examples])
+        content = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
         print(content)
 
         response = []
@@ -259,7 +252,15 @@ Input:\n"""
         while len(response) == 0 and attempts < 10:
             attempts += 1
             print("requesting")
-            async for event in await replicate.async_stream("mistralai/mixtral-8x7b-instruct-v0.1", input={"prompt": content, "prompt_template": "<s>{prompt}", "max_new_tokens": 512, "temperature": 1}):
+            model = "meta/meta-llama-3-70b-instruct"
+            template = f"""
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be succinct -- flippant, even. Examples of Bucket's responses: {examplesString}<|eot_id|><|start_header_id|>chat history<|end_header_id|>
+
+{{prompt}}<|eot_id|><|start_header_id|>response<|end_header_id|>
+"""
+            async for event in await replicate.async_stream(model, input={"prompt": content, "prompt_template": template, "max_new_tokens": 512}):
 
                 #print(f"event type: {event.event}, content: {str(event)}")
                 response_str = str(event)
