@@ -476,7 +476,7 @@ Input:
         for expansion in expansions:
             if not re.findall(expansion.regex, content):
                 continue
-            if not expansion.condition or not expansion.condition(message, expansion):
+            if expansion.condition and not expansion.condition(message, expansion):
                 continue
             any_expanded = True
             content = content.replace(expansion.fr, expansion.to)
