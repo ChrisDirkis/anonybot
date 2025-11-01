@@ -380,7 +380,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
         character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
 
         message_text = re.sub(sing_pattern, "Bucket, sing", message_text)
-        query = "Create a prompt for a song-generation LLM based on the following question. Describe the style, write lyrics if it sounds fun, just enjoy yourself :)\n\n" + message_text
+        query = "Create a prompt for a song-generation LLM based on the following question. Do not include artist names in the prompt. Describe the style, write lyrics if it sounds fun, just enjoy yourself :)\n\n" + message_text
 
         async with message.channel.typing():
             music_prompt = await ask_bucket_async(query, character=character, callback=None)
