@@ -397,7 +397,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                         "bitrate": 256000,
                         "sample_rate": 44100,
                         "audio_format": "mp3",
-                        "style": style_match.group(1).strip() if style_match else "pop",
+                        "prompt": style_match.group(1).strip() if style_match else "pop",
                         "lyrics": lyrics_match.group(1).strip() if lyrics_match else "",
                     }
                 )
