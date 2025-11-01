@@ -381,14 +381,14 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
 
         message_text = re.sub(sing_pattern, "Bucket, sing", message_text)
         query = "Create a prompt for a song-generation LLM based on the following request. Do not include artist names in the prompt. Describe the style, write lyrics, enjoy yourself :)\n\n" \
-            + "Format your response as [style: your_style_here] [lyrics: your_lyrics_here]. Newlines are fine.\n\n" \
+            + "Format your response as `[style: your_style_here] [lyrics: your_lyrics_here]`. That is, square bracket, then `style:`, then the suggested style, then close square bracket. Same for lyrics, but with `lyrics:` instead of `style:`. Newlines are fine.\n\n" \
             + message_text
 
         async with message.channel.typing():
             music_prompt = await ask_bucket_async(query, character=character, callback=None)
 
-            style_match = re.search(r"\[\[style:(.*?)\]\]", music_prompt, re.DOTALL | re.IGNORECASE | re.MULTILINE)
-            lyrics_match = re.search(r"\[\[lyrics:(.*?)\]\]", music_prompt, re.DOTALL| re.IGNORECASE | re.MULTILINE)
+            style_match = re.search(r"\[style:(.*?)\]", music_prompt, re.DOTALL | re.IGNORECASE | re.MULTILINE)
+            lyrics_match = re.search(r"\[lyrics:(.*?)\]", music_prompt, re.DOTALL| re.IGNORECASE | re.MULTILINE)
 
             try:
                 output = replicate.run(
