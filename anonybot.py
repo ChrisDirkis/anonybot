@@ -381,7 +381,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
 
         message_text = re.sub(sing_pattern, "Bucket, sing", message_text)
         query = "Create a prompt for a song-generation LLM based on the following request. Do not include artist names in the prompt. Describe the style, write lyrics, enjoy yourself :)\n\n" \
-            + "Format your response as `[style: your_style_here] [lyrics: your_lyrics_here]`. That is, square bracket, then `style:`, then the suggested style, then close square bracket. Same for lyrics, but with `lyrics:` instead of `style:` Use [intro], [verse], [chorus], [bridge], and [outro] to mark parts of the lyrics, as needed. Newlines are fine. Only 600 characters of lyrics, so keep it short, 3 verses at most imo.\n\n" \
+            + "Format your response as `[title: your_title_here] [style: your_style_here] [lyrics: your_lyrics_here]`. That is, square bracket, then `style:`, then the suggested style, then close square bracket. Same for lyrics, but with `lyrics:` instead of `style:` Use [intro], [verse], [chorus], [bridge], and [outro] to mark parts of the lyrics, as needed. Newlines are fine. Only 600 characters of lyrics, so keep it short, 3 verses at most imo.\n\n" \
             + message_text
 
         async with message.channel.typing():
@@ -389,6 +389,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
 
             music_prompt = await ask_bucket_async(query, character=character, callback=None)
 
+            title_match = re.search(r"\[title:(.*?)\]", music_prompt, re.DOTALL | re.IGNORECASE)
             style_match = re.search(r"\[style:(.*?)\]", music_prompt, re.DOTALL | re.IGNORECASE | re.MULTILINE)
             lyrics_match = re.search(r"\[lyrics:(.*?)\]", music_prompt, re.DOTALL| re.IGNORECASE | re.MULTILINE)
 
@@ -405,8 +406,8 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                 )
 
                 audio_file = io.BytesIO(requests.get(output.url).content)
-                iso_time_string = datetime.datetime.now().isoformat()
-                discord_file = discord.File(fp=audio_file, filename=f"{iso_time_string}_bucket_song.wav", description=music_prompt)
+                iso_time_string = datetime.datetime.now().replace(microsecond=0, second=0).isoformat()
+                discord_file = discord.File(fp=audio_file, filename=f"{iso_time_string}_{title_match.group(1).strip() if title_match else 'bucket_song'}.wav", description=music_prompt)
 
                 lyrics_text = lyrics_match.group(1).strip() if lyrics_match else ""
                 lyrics_text = "\n".join(f"_{line}_" for line in lyrics_text.splitlines())
