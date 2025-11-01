@@ -385,6 +385,8 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
             + message_text
 
         async with message.channel.typing():
+            await reply_split(message, "Sure, one sec")
+
             music_prompt = await ask_bucket_async(query, character=character, callback=None)
 
             style_match = re.search(r"\[style:(.*?)\]", music_prompt, re.DOTALL | re.IGNORECASE | re.MULTILINE)
@@ -406,7 +408,10 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                 iso_time_string = datetime.datetime.now().isoformat()
                 discord_file = discord.File(fp=audio_file, filename=f"{iso_time_string}_bucket_song.wav", description=music_prompt)
 
-                await reply_split(message, "Sure!", file=discord_file)
+                lyrics_text = lyrics_match.group(1).strip() if lyrics_match else ""
+                lyrics_text = "\n".join(f"_{line}_" for line in lyrics_text.splitlines())
+
+                await reply_split(message, f"Peep this:\n\n{lyrics_text}", file=discord_file)
             except Exception as e:
                 await reply_split(message, f"Sorry, my vocal cords are feeling a bit under the weather today :( but what I would have sang was \"{music_prompt}\", and I couldn't because {str(e)}")
 
