@@ -381,7 +381,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
 
         message_text = re.sub(sing_pattern, "Bucket, sing", message_text)
         query = "Create a prompt for a song-generation LLM based on the following request. Do not include artist names in the prompt. Describe the style, write lyrics, enjoy yourself :)\n\n" \
-            + "Format your response as `[style: your_style_here] [lyrics: your_lyrics_here]`. That is, square bracket, then `style:`, then the suggested style, then close square bracket. Same for lyrics, but with `lyrics:` instead of `style:`. Newlines are fine. Only 600 characters of lyrics, so keep it short, 3 verses at most imo.\n\n" \
+            + "Format your response as `[style: your_style_here] [lyrics: your_lyrics_here]`. That is, square bracket, then `style:`, then the suggested style, then close square bracket. Same for lyrics, but with `lyrics:` instead of `style:` Use [intro], [verse], [chorus], [bridge], and [outro] to mark parts of the lyrics, as needed. Newlines are fine. Only 600 characters of lyrics, so keep it short, 3 verses at most imo.\n\n" \
             + message_text
 
         async with message.channel.typing():
