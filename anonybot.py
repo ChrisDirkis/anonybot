@@ -380,16 +380,25 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
         character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
 
         message_text = re.sub(sing_pattern, "Bucket, sing", message_text)
-        query = "Create a prompt for a song-generation LLM based on the following request. Do not include artist names in the prompt. The song will be 30s long. Describe the style, write lyrics if it sounds fun, just enjoy yourself :)\n\n" + message_text
+        query = "Create a prompt for a song-generation LLM based on the following request. Do not include artist names in the prompt. Describe the style, write lyrics, enjoy yourself :)\n\n" \
+            + "Format your response as [[style: your_style_here]] [[lyrics: your_lyrics_here]]. Newlines are fine.\n\n" \
+            + message_text
 
         async with message.channel.typing():
             music_prompt = await ask_bucket_async(query, character=character, callback=None)
 
+            style_match = re.search(r"\[\[style:(.*?)\]\]", music_prompt, re.DOTALL)
+            lyrics_match = re.search(r"\[\[lyrics:(.*?)\]\]", music_prompt, re.DOTALL)
+
             try:
                 output = replicate.run(
-                    "google/lyria-2",
+                    "minimax/music-1.5",
                     input={
-                        "prompt": music_prompt
+                        "bitrate": 256000,
+                        "sample_rate": 44100,
+                        "audio_format": "mp3",
+                        "style": style_match.group(1).strip() if style_match else "pop",
+                        "lyrics": lyrics_match.group(1).strip() if lyrics_match else "",
                     }
                 )
 
