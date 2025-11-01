@@ -254,7 +254,7 @@ def main():
         while len(response) == 0 and attempts < 10:
             attempts += 1
             print("requesting")
-            model = "meta/meta-llama-3-70b-instruct"
+            model = "anthropic/claude-4.5-haiku"
             template = f"""
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
@@ -262,7 +262,7 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
 
 {{prompt}}<|eot_id|><|start_header_id|>response<|end_header_id|>
 """
-            async for event in await replicate.async_stream(model, input={"prompt": content, "prompt_template": template, "max_new_tokens": 512}):
+            async for event in await replicate.async_stream(model, input={"prompt": content, "system_prompt": template, "max_tokens": 1024}):
 
                 #print(f"event type: {event.event}, content: {str(event)}")
                 response_str = str(event)
