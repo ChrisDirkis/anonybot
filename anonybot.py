@@ -565,6 +565,7 @@ Input:
         funcs.append(bucket_take_item)
         funcs.append(bucket_inventory)
     if "AI" in MODES:
+        funcs.append(at_bucket_sing)
         funcs.append(reply_to_bucket)
         funcs.append(at_bucket)
         funcs.append(million_dollars_but_answer)
