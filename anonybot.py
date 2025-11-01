@@ -398,8 +398,8 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                 discord_file = discord.File(fp=audio_file, filename=f"{iso_time_string}_bucket_song.wav", description=music_prompt)
 
                 await reply_split(message, "Sure!", file=discord_file)
-            except:
-                await reply_split(message, f"Sorry, I couldn't generate the song :(")
+            except Exception as e:
+                await reply_split(message, f"Sorry, my vocal cords are feeling a bit under the weather today :( but what I would have sang was \"{music_prompt}\", and I couldn't because {str(e)}")
 
         return True
     
