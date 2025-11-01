@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import random
 import datetime
+import io
 from collections import namedtuple
 
 import replicate
@@ -184,7 +185,7 @@ def main():
     thinking_react = "💭"
     max_message_len = 1999
 
-    async def reply_split(message: discord.Message, response):
+    async def reply_split(message: discord.Message, response, file: discord.File | None = None):
         await message.add_reaction(thinking_react)
 
         response = [response]
@@ -201,7 +202,7 @@ def main():
                     break
 
         for msg in response:
-            await message.reply(msg)
+            await message.reply(msg, file=file)
 
         await message.remove_reaction(thinking_react, client.user)
 
@@ -366,7 +367,39 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                 await ask_bucket_async(message_text, callback=create_or_update, character=character, context=reply_chain)
         
         return True
+    
+    @no_self_respond(client)
+    @channel_only
+    async def at_bucket_sing(message):
+        sing_pattern = r"(?i)\<\@" + str(client.user.id) + r"\> [sS]ing"
+        message_text = strip_formatting(message.content)
+        regex_matches = re.findall(sing_pattern, message_text)
+        if not regex_matches:
+            return False
 
+        character = "HornyBucket" if str(message.channel.id) in HORNY_CHANNEL_IDS else "Bucket"
+
+        message_text = re.sub(sing_pattern, "Bucket,", message_text)
+        query = "Create a prompt for a song-generation LLM based on the following question. Describe the style, write lyrics if it sounds fun, just enjoy yourself :)\n\n" + message_text
+
+        async with message.channel.typing():
+            music_prompt = await ask_bucket_async(query, character=character, callback=None)
+
+            output = replicate.run(
+                "google/lyria-2",
+                input={
+                    "prompt": music_prompt
+                }
+            )
+
+            audio_file = io.BytesIO(requests.get(output.url()).content)
+            iso_time_string = datetime.datetime.now().isoformat()
+            discord_file = discord.File(fp=audio_file, filename=f"{iso_time_string}_bucket_song.wav", description=music_prompt)
+
+            await reply_split(message, "Done!", file=discord_file)
+        
+        return True
+    
     @no_self_respond(client)
     @channel_only
     async def at_bucket(message):
