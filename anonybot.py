@@ -411,7 +411,18 @@ You are Bucket. {charDesc} Respond to chat messages casually and succinctly. Be 
                 lyrics_text = lyrics_match.group(1).strip() if lyrics_match else ""
                 lyrics_text = "\n".join(f"_{line}_" for line in lyrics_text.splitlines())
 
-                await reply_split(message, f"Peep this:\n\n{lyrics_text}", file=discord_file)
+                check_this_out_options = [
+                    ("Festoon your ears with this 'ere shanty", 20),
+                    ("Set your ear peepers to \"listen\"", 20),
+                    ("Peep this", 100),
+                    ("Listen to this", 100),
+                    ("Check out this banger", 50),
+                    ("Feast your auditory canals upon this", 20),
+                ]
+
+                check_this_out = select_weighted(check_this_out_options)
+
+                await reply_split(message, f"{check_this_out}:\n\n{lyrics_text}", file=discord_file)
             except Exception as e:
                 await reply_split(message, f"Sorry, my vocal cords are feeling a bit under the weather today :( but what I would have sang was \"{music_prompt}\", and I couldn't because {str(e)}")
 
