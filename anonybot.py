@@ -527,7 +527,7 @@ Input:
         expansion(r"(?i)https?://twitter.com/[^/]+/status/\d+", "twitter.com/", "vxtwitter.com/", twitter_condition),
         expansion(r"(?i)https?://x.com/[^/]+/status/\d+", "x.com/", "vxtwitter.com/", twitter_condition),
         expansion(r"(?i)https?://(www.)?tiktok.com/.+", "tiktok.com/", "vxtiktok.com/", None),
-        expansion(r"(?i)https?://(www.)?instagram.com/.+", "instagram.com/", "instagramez.com/", None),
+        expansion(r"(?i)https?://(www.)?instagram.com/.+", "instagram.com/", "kkinstagram.com/", None),
     ]
 
     @no_self_respond(client)
